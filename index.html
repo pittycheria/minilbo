@@ -216,7 +216,7 @@ window.LBO_SMAP={"A1":8,"A2":8,"B2":2,"A3":8,"B3":1,"C3":4,"D3":4,"E3":4,"F3":4,
     </div>
   </div>
 </div>
-<footer>Standalone tool &mdash; no data leaves your browser. Share this single HTML file with anyone. Educational model; not investment advice.</footer>
+<footer>Educational model; not investment advice. Calculations run in your browser. AI answers and basic visit analytics (approximate location) are processed via this site’s Cloudflare Worker.</footer>
 
 <button id="askFab" onclick="openChat('general')">Ask about a number</button>
 <div id="chatPanel" class="hidden">
@@ -1063,5 +1063,7 @@ async function exportExcel(){
 /* init */
 buildInputs();buildExitSel();buildGuide();render();syncTg();updateAIStatus();
 </script>
+<script>(function(){try{fetch("https://soft-sky-8f8e.pittycheria.workers.dev/log",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:location.pathname+location.search,ref:document.referrer||""}),keepalive:true}).catch(function(){});}catch(e){}})();</script>
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "9d7d78c546af471982f7830176b9679e"}'></script><!-- End Cloudflare Web Analytics -->
 </body>
 </html>
