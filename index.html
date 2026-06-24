@@ -83,6 +83,33 @@
   .warn{background:#fffbeb;border:1px solid #fde68a;color:var(--amber);padding:8px 11px;border-radius:7px;
         font-size:12px;margin-bottom:12px;display:none}
   footer{color:var(--muted);font-size:11.5px;text-align:center;padding:18px}
+  .qbtn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;
+        border:1px solid var(--blue);color:var(--blue);background:var(--blue-bg);font-size:11px;font-weight:700;
+        cursor:pointer;padding:0;margin-left:7px;vertical-align:middle;line-height:1}
+  .qbtn:hover{background:var(--blue);color:#fff}
+  #askFab{position:fixed;right:20px;bottom:20px;z-index:50;background:var(--blue);color:#fff;border:none;
+          border-radius:24px;padding:11px 17px;font-weight:650;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer}
+  #askFab:hover{background:#1e40af}
+  #chatPanel{position:fixed;right:20px;bottom:20px;z-index:60;width:368px;max-width:calc(100vw - 24px);
+          height:540px;max-height:calc(100vh - 40px);background:#fff;border:1px solid var(--line);border-radius:14px;
+          box-shadow:0 12px 44px rgba(0,0,0,.24);display:flex;flex-direction:column;overflow:hidden}
+  #chatPanel.hidden{display:none}
+  .chat-head{background:var(--head);color:#fff;padding:11px 14px;display:flex;justify-content:space-between;align-items:flex-start}
+  .chat-head b{font-size:13.5px}
+  .chat-head .sub2{font-size:11px;color:#cbd5e1;margin-top:2px;max-width:270px}
+  .chat-head button{background:transparent;border:none;color:#cbd5e1;font-size:20px;cursor:pointer;padding:0 2px;line-height:1}
+  #chatMsgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px;background:var(--bg)}
+  .msg{max-width:90%;padding:8px 11px;border-radius:12px;font-size:12.5px;line-height:1.55}
+  .msg.bot{background:#fff;border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:3px}
+  .msg.user{background:var(--blue);color:#fff;align-self:flex-end;border-bottom-right-radius:3px}
+  .msg.bot b{color:var(--head)}
+  .chat-suggest{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 9px;background:var(--bg)}
+  .chip{font-size:11px;border:1px solid #cbd5e1;background:#fff;color:var(--blue);border-radius:14px;padding:4px 9px;cursor:pointer;text-align:left}
+  .chip:hover{background:var(--blue-bg)}
+  .chat-input{display:flex;gap:6px;padding:9px;border-top:1px solid var(--line);background:#fff}
+  .chat-input input{flex:1;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:12.5px;font-family:inherit}
+  .chat-input button{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:0 14px;font-weight:600;cursor:pointer}
+  @media print{#askFab,#chatPanel{display:none!important}}
 </style>
 </head>
 <body>
@@ -107,7 +134,7 @@
     <!-- ============ INPUTS ============ -->
     <div>
       <div class="panel">
-        <h2>Assumptions</h2>
+        <h2>Assumptions <button class="qbtn" onclick="openChat('inputs')" title="Ask what an input means">?</button></h2>
         <p class="sub">Everything in <b style="color:var(--blue)">blue</b> is yours to enter. The model recalculates instantly.</p>
         <div class="legend">New to LBOs? Start by loading the example deal above, then change one number at a time and watch the returns move. Help text under every field explains it in plain English.</div>
         <div class="warn" id="warn"></div>
@@ -124,30 +151,31 @@
           <strong>Exit year:</strong>
           <select id="exitSel" onchange="render()"></select>
           <span class="note-bar">The year the sponsor sells the company. Returns below are measured to this year.</span>
+          <button class="qbtn" onclick="openChat('returns')" title="Ask how MOIC, IRR or exit value are calculated">?</button>
         </div>
         <div id="returnsBox"></div>
       </div>
 
       <div class="panel">
-        <h2>Sources &amp; Uses</h2>
+        <h2>Sources &amp; Uses <button class="qbtn" onclick="openChat('su')" title="Ask how these numbers are calculated">?</button></h2>
         <p class="sub">How the purchase is funded (sources) and what the money buys (uses). They must balance.</p>
         <div id="suBox"></div>
       </div>
 
       <div class="panel">
-        <h2>Projected Financials &amp; Credit Metrics</h2>
+        <h2>Projected Financials &amp; Credit Metrics <button class="qbtn" onclick="openChat('proj')" title="Ask how a line is calculated">?</button></h2>
         <p class="sub">The operating model and how leverage falls as debt is paid down with free cash flow.</p>
         <div style="overflow-x:auto"><div id="projBox"></div></div>
       </div>
 
       <div class="panel">
-        <h2>Returns by Exit Year</h2>
+        <h2>Returns by Exit Year <button class="qbtn" onclick="openChat('returns')" title="Ask how MOIC and IRR are calculated">?</button></h2>
         <p class="sub">MOIC = money out &divide; money in. IRR = annualized return.</p>
         <div id="retTblBox"></div>
       </div>
 
       <div class="panel">
-        <h2>Sensitivity &mdash; Entry vs Exit Multiple</h2>
+        <h2>Sensitivity &mdash; Entry vs Exit Multiple <button class="qbtn" onclick="openChat('sens')" title="Ask how the sensitivity grid works">?</button></h2>
         <p class="sub">How returns change if you pay more/less going in or sell for more/less. Rows = entry multiple, columns = exit multiple, at your selected exit year.</p>
         <div class="exit-pick">
           <span class="toggle">
@@ -169,6 +197,20 @@
   </div>
 </div>
 <footer>Standalone tool &mdash; no data leaves your browser. Share this single HTML file with anyone. Educational model; not investment advice.</footer>
+
+<button id="askFab" onclick="openChat('general')">Ask about a number</button>
+<div id="chatPanel" class="hidden">
+  <div class="chat-head">
+    <div><b id="chatTitle">Model explainer</b><div class="sub2">Ask in plain English how any number is calculated — answers use your current inputs.</div></div>
+    <button onclick="closeChat()" title="Close">&times;</button>
+  </div>
+  <div id="chatMsgs"></div>
+  <div class="chat-suggest" id="chatSuggest"></div>
+  <div class="chat-input">
+    <input id="chatBox" placeholder="e.g. how is sponsor equity calculated?" onkeydown="if(event.key==='Enter'){sendChat();}">
+    <button onclick="sendChat()">Send</button>
+  </div>
+</div>
 
 <script>
 /* =================== LBO MODEL ENGINE =================== */
@@ -643,6 +685,97 @@ function buildGuide(){
   '<h3>Setting the years &amp; entering multi-year data</h3><p>In the <b>Target financials</b> section set the <b>base year</b> (your latest actual year) and the <b>final projection year</b> — the forecast runs from one to the other, so you can model any horizon from 1 to 15 years. The input columns and every output table resize automatically. For the projected years, open <b>Multi-year forecast</b> and choose a method: <b>“% growth &amp; margins”</b> lets you type a growth rate and margin for each year, while <b>“Enter $ figures”</b> lets you paste each year’s revenue, COGS, SG&amp;A, depreciation and CapEx in dollars — useful when a CIM already gives you a full projection. Extra historical years beyond the base year aren’t needed; an LBO projects forward from the most recent actuals.</p>'+
   '<p class="note-bar">This tool implements standard LBO mechanics, including the cash-flow sweep and the circular interest calculation.</p>';
 }
+
+/* =================== MODEL EXPLAINER (built-in Q&A) =================== */
+function arrAt(a,i){return Array.isArray(a)?(a[i]!==undefined?a[i]:a[a.length-1]):a;}
+function chatExit(){const sel=document.getElementById('exitSel');let t=parseInt(sel&&sel.value)||4;const n=Nproj();return Math.min(Math.max(t,1),n);}
+const KB=[
+ {a:['enter multiple years','multiple years','number of years','how many years','projection years','time horizon','how do i set the years'],
+  f:(m,S,t)=>`Set the <b>base year</b> and <b>final projection year</b> in section&nbsp;2 — the model runs from one to the other (1–15 years) and every column resizes automatically. For each projected year you can type a growth %/margin, or switch the toggle to "Enter $ figures" to paste the dollars straight from a CIM.`},
+ {a:['sponsor equity','equity check','equity invested','equity contribution','financial sponsor','sponsor'],
+  f:(m,S,t)=>`<b>Sponsor equity</b> is the cash the private-equity buyer puts in — the balancing item ("plug") of the deal. It's whatever's left of Total Uses after the debt and any rolled-over equity:<br>Uses ${fmtM(m.totalUses)} − Revolver ${fmtM(m.revolverDraw)} − Term Loan ${fmtM(m.termLoan)} − Roll-over ${fmtM(m.rolloverEquity)} = <b>${fmtM(m.sponsorEquity)}</b>.`},
+ {a:['term loan','tlb','acquisition debt','senior debt','unitranche'],
+  f:(m,S,t)=>`The <b>term loan</b> is sized as a multiple of purchase EBITDA, rounded to the nearest 5:<br>round(EBITDA ${fmtM(m.purchaseEBITDA)} × ${S.termXEbitda}× , 5) = <b>${fmtM(m.termLoan)}</b>. It's the main acquisition debt, repaid over time by mandatory amortization plus the cash sweep.`},
+ {a:['revolver','revolving','credit line','rcf'],
+  f:(m,S,t)=>`The <b>revolver</b> is a flexible credit line for working-capital swings. Drawn at close = EBITDA ${fmtM(m.purchaseEBITDA)} × ${S.revXEbitda}× = <b>${fmtM(m.revolverDraw)}</b> (usually 0 — it's backup liquidity). Facility size ${fmtM(S.revFacility)}; you pay ${fmtP(S.unusedFee)} on the undrawn part.`},
+ {a:['roll-over','rollover','rolled equity','roll over equity'],
+  f:(m,S,t)=>`<b>Roll-over equity</b> is value existing owners reinvest into the new deal rather than cashing out. = equity needed × their pro-forma ownership %, capped at their proceeds. With your inputs it's <b>${fmtM(m.rolloverEquity)}</b> (set the pro-forma stakes in section&nbsp;7).`},
+ {a:['purchase price','enterprise value','total enterprise','tev'],
+  f:(m,S,t)=>`<b>Enterprise value</b> (the price for the whole business) = purchase EBITDA × entry multiple = ${fmtM(m.purchaseEBITDA)} × ${S.entryMultiple}× = <b>${fmtM(m.TEV)}</b>.`},
+ {a:['purchase ebitda','base ebitda'],
+  f:(m,S,t)=>`<b>Purchase EBITDA</b> is the base-year EBITDA the deal is priced on: gross profit − SG&A in ${S.startYear} = <b>${fmtM(m.purchaseEBITDA)}</b>. It's derived from the income statement you entered, not typed directly.`},
+ {a:['transaction fee','advisory fee','banker fee','deal fee'],
+  f:(m,S,t)=>`<b>Transaction fees</b> (${fmtM(S.transactionFees)}) are advisory, legal and diligence costs paid at close — a "use" of cash funded by the equity.`},
+ {a:['financing fee'],
+  f:(m,S,t)=>`<b>Financing fees</b> (${fmtM(S.financingFees)}) are paid to arrange the debt, then expensed (amortized) over ${S.finFeeAmortYears} years — a non-cash charge added back in the cash-flow statement.`},
+ {a:['total uses','total sources','sources and uses','sources & uses','funded','funding','why must sources','balance'],
+  f:(m,S,t)=>`<b>Sources & Uses</b> shows how the deal is paid for, and the two sides must equal. Uses = purchase ${fmtM(m.TEV)} + cash to B/S ${fmtM(m.cashToBS)} + fees ${fmtM(S.transactionFees+S.financingFees)} = <b>${fmtM(m.totalUses)}</b>. Sources = debt ${fmtM(m.revolverDraw+m.termLoan)} + roll-over ${fmtM(m.rolloverEquity)} + sponsor equity ${fmtM(m.sponsorEquity)} = <b>${fmtM(m.totalSources)}</b>. Sponsor equity flexes so they match.`},
+ {a:['moic','multiple of invested','money multiple','cash on cash','cash-on-cash'],
+  f:(m,S,t)=>{const r=m.returnsAt(t,S.exitMultiple);return `<b>MOIC</b> = equity proceeds at exit ÷ initial equity invested = ${fmtM(r.eqToInv)} ÷ ${fmtM(m.initialEquity)} = <b>${r.moic.toFixed(2)}×</b>. At a ${S.startYear+t} exit you'd get back ${r.moic.toFixed(2)}× your money.`}},
+ {a:['irr','annualized','rate of return','internal rate'],
+  f:(m,S,t)=>{const r=m.returnsAt(t,S.exitMultiple);return `<b>IRR</b> is the annualized return. With one investment and one exit, IRR = MOIC^(1/years) − 1 = ${r.moic.toFixed(2)}^(1/${t}) − 1 = <b>${fmtP(r.irr)}</b>.`}},
+ {a:['exit equity','equity value at exit','equity proceeds','equity at exit'],
+  f:(m,S,t)=>{const r=m.returnsAt(t,S.exitMultiple);return `<b>Exit equity value</b> = exit enterprise value − net debt. = (EBITDA ${fmtM(m.ebitda[t])} × ${S.exitMultiple}×) − debt ${fmtM(m.debt[t])} + cash ${fmtM(m.cash[t])} = <b>${fmtM(r.eq)}</b>. After the ${fmtP(S.optionPool)} option pool, investors receive ${fmtM(r.eqToInv)}.`}},
+ {a:['option pool','management option'],
+  f:(m,S,t)=>{const r=m.returnsAt(t,S.exitMultiple);return `The <b>management option pool</b> reserves ${fmtP(S.optionPool)} of exit equity gains for management, taken out before the sponsor's proceeds. At ${S.startYear+t} that's <b>${fmtM(r.optPool)}</b>.`}},
+ {a:['leverage','debt/ebitda','debt / ebitda','debt to ebitda','levered','turns of debt'],
+  f:(m,S,t)=>`<b>Leverage = total debt ÷ EBITDA.</b> At close ${fmtM(m.debt[0])} ÷ ${fmtM(m.ebitda[0])} = <b>${m.levR[0].toFixed(2)}×</b>; by ${S.startYear+t} it falls to <b>${m.levR[t].toFixed(2)}×</b> as cash flow repays debt. This "deleveraging" is a key source of LBO returns.`},
+ {a:['coverage','interest coverage','ebitda / interest','ebitda/interest'],
+  f:(m,S,t)=>`<b>Interest coverage = EBITDA ÷ cash interest.</b> In ${S.startYear+t}: ${fmtM(m.ebitda[t])} ÷ ${fmtM(m.cashInt[t])} = <b>${m.cov[t].toFixed(2)}×</b>. Higher is safer — it shows how comfortably profit covers interest.`},
+ {a:['cash sweep','sweep'],
+  f:(m,S,t)=>`The <b>cash sweep</b> uses ${fmtP(S.termSweep)} of each year's leftover free cash flow to pre-pay the term loan early, on top of the required amortization — which is why debt falls faster than the mandatory ${fmtP(S.termAmort)}/yr.`},
+ {a:['mandatory','amortization','amort','required repayment','scheduled repayment'],
+  f:(m,S,t)=>`<b>Mandatory amortization</b> = ${fmtP(S.termAmort)} of the original term loan (${fmtM(m.termLoan)}) repaid every year = <b>${fmtM(m.termLoan*S.termAmort)}</b>, regardless of cash flow.`},
+ {a:['interest expense','interest cost','interest'],
+  f:(m,S,t)=>`<b>Interest</b> is charged on the average of beginning & ending debt (your average-interest setting) at benchmark rate + spread. Gross interest in ${S.startYear+t} = <b>${fmtM(m.grossInt[t])}</b> (cash portion ${fmtM(m.cashInt[t])}). Because debt and interest depend on each other, the model solves this circularly.`},
+ {a:['net income','earnings','bottom line','profit'],
+  f:(m,S,t)=>`<b>Net income</b> = EBIT − interest − management fee − taxes. In ${S.startYear+t} it's <b>${fmtM(m.ni[t])}</b>, feeding the cash flow that pays down debt.`},
+ {a:['free cash flow','fcf'],
+  f:(m,S,t)=>`<b>Free cash flow</b> = net income + depreciation + fee amortization ± change in working capital − CapEx. In ${S.startYear+t}: <b>${fmtM(m.fcfArr[t])}</b> — the cash available to repay debt.`},
+ {a:['net debt'],
+  f:(m,S,t)=>`<b>Net debt</b> = total debt − cash. In ${S.startYear+t}: ${fmtM(m.debt[t])} − ${fmtM(m.cash[t])} = <b>${fmtM(m.netDebt[t])}</b>. It's subtracted from enterprise value to get equity value.`},
+ {a:['total debt','debt balance','outstanding debt'],
+  f:(m,S,t)=>`<b>Total debt</b> = revolver + term loan outstanding. It starts at ${fmtM(m.debt[0])} and is ${fmtM(m.debt[t])} by ${S.startYear+t} after repayments.`},
+ {a:['ebitda'],
+  f:(m,S,t)=>`<b>EBITDA</b> = gross profit − SG&A — core operating earnings before interest, tax and depreciation. In ${S.startYear+t}: ${fmtM(m.gp[t])} − ${fmtM(-m.sga[t])} = <b>${fmtM(m.ebitda[t])}</b> (${fmtP(m.ebitda[t]/m.rev[t])} margin).`},
+ {a:['revenue','sales','top line','turnover'],
+  f:(m,S,t)=>`<b>Revenue</b>: the base year is entered; future years grow by your growth driver (or you type the dollars). ${S.startYear+t} revenue = <b>${fmtM(m.rev[t])}</b>.`},
+ {a:['gross profit','gross margin'],
+  f:(m,S,t)=>`<b>Gross profit</b> = revenue − COGS. In ${S.startYear+t}: ${fmtM(m.rev[t])} − ${fmtM(-m.cogs[t])} = <b>${fmtM(m.gp[t])}</b> (${fmtP(m.gp[t]/m.rev[t])} margin).`},
+ {a:['sga','operating expense','opex','overhead'],
+  f:(m,S,t)=>`<b>SG&A</b> (overhead) in ${S.startYear+t} is <b>${fmtM(-m.sga[t])}</b>, set by your SG&A %-of-revenue assumption.`},
+ {a:['taxes','tax rate','tax'],
+  f:(m,S,t)=>`<b>Taxes</b> = pre-tax income × your tax rate (${fmtP(arrAt(S.taxRate,t-1))} in ${S.startYear+t}), reducing net income and the cash available to repay debt.`},
+ {a:['working capital','nwc','receivable','payable','inventory'],
+  f:(m,S,t)=>`<b>Working capital</b> items grow with revenue at their base-year % of sales. Growth ties up cash (a use); the model captures the year-on-year change in the cash-flow statement.`},
+ {a:['capex','capital expenditure','capital spending'],
+  f:(m,S,t)=>`<b>CapEx</b> = your CapEx %-of-revenue × revenue. In ${S.startYear+t}: <b>${fmtM(-m.capex[t])}</b> — cash spent on assets, reducing free cash flow.`},
+ {a:['depreciation'],
+  f:(m,S,t)=>`<b>Depreciation</b> is a non-cash expense (your depreciation %-of-revenue × revenue). It lowers taxable income but is added back in the cash-flow statement.`},
+ {a:['management fee','sponsor fee'],
+  f:(m,S,t)=>`The <b>sponsor management fee</b> = max(${fmtP(S.mgmtFeePct)} of EBITDA, ${fmtM(S.mgmtFeeMin)} floor), charged annually by the PE firm, reducing pre-tax income.`},
+ {a:['entry multiple','what i pay'],
+  f:(m,S,t)=>`The <b>entry multiple</b> (${S.entryMultiple}×) is what you pay per unit of EBITDA. × purchase EBITDA ${fmtM(m.purchaseEBITDA)} = enterprise value ${fmtM(m.TEV)}. Paying a lower multiple generally lifts returns.`},
+ {a:['exit multiple','sell for'],
+  f:(m,S,t)=>`The <b>exit multiple</b> (${S.exitMultiple}×) is what you assume a future buyer pays. × exit EBITDA ${fmtM(m.ebitda[t])} = exit enterprise value ${fmtM(m.ebitda[t]*S.exitMultiple)}. Conservative models keep this ≤ the entry multiple.`},
+ {a:['sensitivity','sensitivities','sensitivity table','what drives'],
+  f:(m,S,t)=>`The <b>sensitivity table</b> re-runs the whole model for a grid of entry multiples (rows) × exit multiples (columns) at your chosen exit year, so you can see how returns swing if you pay more/less or sell higher/lower. The highlighted cell is your current assumption.`}
+];
+const SECTIONS={
+ su:{title:'Sources & Uses', intro:'This section shows how the purchase is funded. Ask me about any line.', chips:['How is sponsor equity calculated?','How is the term loan sized?','What is roll-over equity?','Why must sources equal uses?']},
+ proj:{title:'Projected Financials', intro:'The operating forecast and leverage metrics. Ask about any line.', chips:['How is EBITDA calculated?','What is free cash flow?','Why does Debt/EBITDA fall?','What is interest coverage?']},
+ returns:{title:'Returns', intro:'How your money grows. Ask about the return figures.', chips:['How is MOIC calculated?','How is IRR calculated?','How is exit equity value found?','What is the option pool?']},
+ sens:{title:'Sensitivity', intro:'This grid stress-tests returns against entry and exit multiples.', chips:['How does the sensitivity table work?','Why does the exit multiple matter?','What drives a higher MOIC?']},
+ inputs:{title:'Assumptions', intro:'Blue fields are yours to enter. Ask what any input means.', chips:['What is the entry multiple?','What is the cash sweep?','How do I enter multiple years?','What is mandatory amortization?']},
+ general:{title:'Model explainer', intro:'Ask me in plain English how any number in this model is calculated — sources & uses, EBITDA, debt paydown, MOIC, IRR and more.', chips:['How is sponsor equity calculated?','How is MOIC calculated?','What is the cash sweep?','How is EBITDA calculated?']}
+};
+function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function addMsg(role,html){const box=document.getElementById('chatMsgs');const d=document.createElement('div');d.className='msg '+role;d.innerHTML=html;box.appendChild(d);box.scrollTop=box.scrollHeight;}
+function renderChips(arr){const c=document.getElementById('chatSuggest');c.innerHTML='';(arr||[]).forEach(q=>{const b=document.createElement('button');b.className='chip';b.textContent=q;b.onclick=()=>sendChat(q);c.appendChild(b);});}
+function openChat(sec){const p=document.getElementById('chatPanel');p.classList.remove('hidden');const cfg=SECTIONS[sec]||SECTIONS.general;document.getElementById('chatTitle').textContent=cfg.title;addMsg('bot',cfg.intro);renderChips(cfg.chips);document.getElementById('chatBox').focus();}
+function closeChat(){document.getElementById('chatPanel').classList.add('hidden');}
+function answerQuestion(q){const m=computeModel(S),t=chatExit();const norm=' '+q.toLowerCase().replace(/[?.,]/g,' ')+' ';let best=null,score=0;KB.forEach(e=>{let s=0;e.a.forEach(a=>{if(norm.includes(a))s=Math.max(s,a.length);});if(s>score){score=s;best=e;}});if(!best)return `I'm not sure which number you mean. I can explain things like: sponsor equity, term loan, EBITDA, free cash flow, Debt/EBITDA, interest, MOIC, IRR, exit equity value, the cash sweep and more — try naming the line item.`;return best.f(m,S,t);}
+function sendChat(preset){const box=document.getElementById('chatBox');const q=(preset!==undefined?preset:box.value).trim();if(!q)return;box.value='';addMsg('user',escapeHtml(q));const ans=answerQuestion(q);setTimeout(()=>addMsg('bot',ans),140);}
 
 /* init */
 buildInputs();buildExitSel();buildGuide();render();syncTg();
