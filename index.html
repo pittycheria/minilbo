@@ -227,7 +227,7 @@ window.LBO_SMAP={"A1":8,"A2":8,"B2":2,"A3":8,"B3":1,"C3":4,"D3":4,"E3":4,"F3":4,
   <div id="chatMsgs"></div>
   <div class="chat-suggest" id="chatSuggest"></div>
   <div class="chat-mode">
-    <label class="aim"><input type="checkbox" id="aiToggle" onchange="toggleAI()"> AI mode</label>
+    <label class="aim"><input type="checkbox" id="aiToggle" checked onchange="toggleAI()"> AI mode</label>
     <span id="aiStatus" class="ai-status">built-in explainer</span>
     <button class="lnk" onclick="setProxy()" title="Set your AI proxy URL">&#9881;</button>
   </div>
@@ -385,8 +385,8 @@ let S=JSON.parse(JSON.stringify(EXAMPLE));
 let sensMode='moic';
 /* Paste your Cloudflare Worker URL between the quotes to enable AI mode for everyone who opens this file.
    You can also set/override it at runtime via the gear icon in the chat (saved in your browser). */
-const AI_PROXY_URL="";
-let AI_ON=false;
+const AI_PROXY_URL="https://soft-sky-8f8e.pittycheria.workers.dev";
+let AI_ON=true;
 let chatHistory=[];
 const PERYEAR=['revGrowth','grossMargin','smPct','taxRate','capexPct','depPct','revDirect','cogsDirect','sgaDirect','depDirect','capexDirect'];
 function Nproj(){return Math.max(1,Math.min(Math.round((S.endYear||S.startYear+5)-S.startYear),15));}
