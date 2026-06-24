@@ -106,6 +106,12 @@
   .chat-suggest{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 9px;background:var(--bg)}
   .chip{font-size:11px;border:1px solid #cbd5e1;background:#fff;color:var(--blue);border-radius:14px;padding:4px 9px;cursor:pointer;text-align:left}
   .chip:hover{background:var(--blue-bg)}
+  .chat-mode{display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:1px solid var(--line);background:#fff;font-size:11.5px}
+  .chat-mode .aim{display:flex;align-items:center;gap:5px;font-weight:600;color:var(--head);cursor:pointer;white-space:nowrap}
+  .ai-status{color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lnk{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0}
+  .lnk:hover{color:var(--blue)}
+  .typing{font-style:italic;color:var(--muted)}
   .chat-input{display:flex;gap:6px;padding:9px;border-top:1px solid var(--line);background:#fff}
   .chat-input input{flex:1;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:12.5px;font-family:inherit}
   .chat-input button{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:0 14px;font-weight:600;cursor:pointer}
@@ -206,6 +212,11 @@
   </div>
   <div id="chatMsgs"></div>
   <div class="chat-suggest" id="chatSuggest"></div>
+  <div class="chat-mode">
+    <label class="aim"><input type="checkbox" id="aiToggle" onchange="toggleAI()"> AI mode</label>
+    <span id="aiStatus" class="ai-status">built-in explainer</span>
+    <button class="lnk" onclick="setProxy()" title="Set your AI proxy URL">&#9881;</button>
+  </div>
   <div class="chat-input">
     <input id="chatBox" placeholder="e.g. how is sponsor equity calculated?" onkeydown="if(event.key==='Enter'){sendChat();}">
     <button onclick="sendChat()">Send</button>
@@ -354,6 +365,11 @@ const EXAMPLE={
 };
 let S=JSON.parse(JSON.stringify(EXAMPLE));
 let sensMode='moic';
+/* Paste your Cloudflare Worker URL between the quotes to enable AI mode for everyone who opens this file.
+   You can also set/override it at runtime via the gear icon in the chat (saved in your browser). */
+const AI_PROXY_URL="";
+let AI_ON=false;
+let chatHistory=[];
 const PERYEAR=['revGrowth','grossMargin','smPct','taxRate','capexPct','depPct','revDirect','cogsDirect','sgaDirect','depDirect','capexDirect'];
 function Nproj(){return Math.max(1,Math.min(Math.round((S.endYear||S.startYear+5)-S.startYear),15));}
 function resizeArrays(n){
@@ -775,10 +791,80 @@ function renderChips(arr){const c=document.getElementById('chatSuggest');c.inner
 function openChat(sec){const p=document.getElementById('chatPanel');p.classList.remove('hidden');const cfg=SECTIONS[sec]||SECTIONS.general;document.getElementById('chatTitle').textContent=cfg.title;addMsg('bot',cfg.intro);renderChips(cfg.chips);document.getElementById('chatBox').focus();}
 function closeChat(){document.getElementById('chatPanel').classList.add('hidden');}
 function answerQuestion(q){const m=computeModel(S),t=chatExit();const norm=' '+q.toLowerCase().replace(/[?.,]/g,' ')+' ';let best=null,score=0;KB.forEach(e=>{let s=0;e.a.forEach(a=>{if(norm.includes(a))s=Math.max(s,a.length);});if(s>score){score=s;best=e;}});if(!best)return `I'm not sure which number you mean. I can explain things like: sponsor equity, term loan, EBITDA, free cash flow, Debt/EBITDA, interest, MOIC, IRR, exit equity value, the cash sweep and more — try naming the line item.`;return best.f(m,S,t);}
-function sendChat(preset){const box=document.getElementById('chatBox');const q=(preset!==undefined?preset:box.value).trim();if(!q)return;box.value='';addMsg('user',escapeHtml(q));const ans=answerQuestion(q);setTimeout(()=>addMsg('bot',ans),140);}
+function sendChat(preset){
+  const box=document.getElementById('chatBox');
+  const q=(preset!==undefined?preset:box.value).trim();
+  if(!q)return; box.value='';
+  addMsg('user',escapeHtml(q));
+  if(AI_ON && proxyUrl()) askAI(q);
+  else setTimeout(()=>addMsg('bot',answerQuestion(q)),140);
+}
+/* ---- AI mode (optional, via your hosted proxy) ---- */
+function proxyUrl(){try{return (localStorage.getItem('lbo_proxy_url')||AI_PROXY_URL||'').trim();}catch(e){return AI_PROXY_URL;}}
+function setProxy(){
+  const cur=proxyUrl();
+  const v=prompt('Paste your Cloudflare Worker URL to enable AI mode (leave blank to clear):',cur);
+  if(v===null)return;
+  try{ if(v.trim())localStorage.setItem('lbo_proxy_url',v.trim()); else localStorage.removeItem('lbo_proxy_url'); }catch(e){}
+  updateAIStatus();
+}
+function toggleAI(){
+  const cb=document.getElementById('aiToggle');
+  AI_ON=cb.checked;
+  if(AI_ON && !proxyUrl()){ AI_ON=false; cb.checked=false; addMsg('bot','To use AI mode, set your proxy URL first — click the gear icon and paste your Cloudflare Worker URL.'); setProxy(); if(proxyUrl()){AI_ON=true;cb.checked=true;} }
+  updateAIStatus();
+}
+function updateAIStatus(){
+  const s=document.getElementById('aiStatus'); if(!s)return;
+  const has=!!proxyUrl();
+  s.textContent = (AI_ON&&has) ? 'AI mode — Claude via your proxy' : (has?'built-in explainer (AI available)':'built-in explainer (no proxy set)');
+}
+function buildAIContext(){
+  const m=computeModel(S), t=chatExit(), r=m.returnsAt(t,S.exitMultiple);
+  const round=a=>Array.isArray(a)?a.map(x=>Math.round(x*100)/100):Math.round(a*100)/100;
+  const ctx={
+    inputs:S,
+    derived:{
+      purchaseEBITDA:round(m.purchaseEBITDA), enterpriseValue:round(m.TEV), termLoan:round(m.termLoan),
+      revolverDrawn:round(m.revolverDraw), rolloverEquity:round(m.rolloverEquity), sponsorEquity:round(m.sponsorEquity),
+      totalUses:round(m.totalUses), totalSources:round(m.totalSources), initialEquity:round(m.initialEquity),
+      years:m.yr, revenue:round(m.rev), ebitda:round(m.ebitda), netIncome:round(m.ni), freeCashFlow:round(m.fcfArr),
+      totalDebt:round(m.debt), netDebt:round(m.netDebt), cash:round(m.cash),
+      debtToEbitda:round(m.levR), interestCoverage:round(m.cov), grossInterest:round(m.grossInt),
+      selectedExitYear:S.startYear+t, MOIC:round(r.moic), IRR:Math.round(r.irr*1000)/10+'%',
+      exitEquityValue:round(r.eq), equityToInvestors:round(r.eqToInv), managementOptionPool:round(r.optPool)
+    },
+    units:'all $ figures in millions; arrays run from the base year through each projected year',
+    formulas:'EV=purchaseEBITDA*entryMultiple; termLoan=round(purchaseEBITDA*termXEbitda,5); sponsorEquity=totalUses-debt-rollover (balancing plug); EBITDA=grossProfit-SGA; FCF=NI+depreciation+feeAmort+changeInWorkingCapital-capex; leverage=totalDebt/EBITDA; mandatoryAmort=termAmort*originalTermLoan; cashSweep=termSweep%*leftover FCF prepays term loan; interest charged on average of beginning&ending debt at benchmark+spread (solved circularly); exitEquity=exitEBITDA*exitMultiple-debt+cash; optionPool=optionPool%*max(exitEquity-initialEquity,0); MOIC=equityToInvestors/initialEquity; IRR=MOIC^(1/years)-1.'
+  };
+  return JSON.stringify(ctx);
+}
+function addTyping(){const box=document.getElementById('chatMsgs');const d=document.createElement('div');d.className='msg bot typing';d.textContent='thinking…';box.appendChild(d);box.scrollTop=box.scrollHeight;return d;}
+function mdToHtml(t){return escapeHtml(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`(.+?)`/g,'<code>$1</code>').replace(/\n/g,'<br>');}
+async function askAI(q){
+  const url=proxyUrl(); const typing=addTyping();
+  try{
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:q,context:buildAIContext(),history:chatHistory.slice(-8)})});
+    let data={}; try{data=await res.json();}catch(e){}
+    typing.remove();
+    if(!res.ok||!data||data.error){
+      addMsg('bot','<span style="color:#b45309">AI request failed'+(data&&data.error?(' — '+escapeHtml(String(data.error))):(' ('+res.status+')'))+'. Showing the built-in answer instead:</span><br><br>'+answerQuestion(q));
+      return;
+    }
+    const text=(data.text||'').trim();
+    if(!text){ addMsg('bot',answerQuestion(q)); return; }
+    addMsg('bot',mdToHtml(text));
+    chatHistory.push({role:'user',content:q},{role:'assistant',content:text});
+    if(chatHistory.length>16)chatHistory=chatHistory.slice(-16);
+  }catch(e){
+    typing.remove();
+    addMsg('bot','<span style="color:#b45309">Could not reach the AI proxy. Showing the built-in answer instead:</span><br><br>'+answerQuestion(q));
+  }
+}
 
 /* init */
-buildInputs();buildExitSel();buildGuide();render();syncTg();
+buildInputs();buildExitSel();buildGuide();render();syncTg();updateAIStatus();
 </script>
 </body>
 </html>
