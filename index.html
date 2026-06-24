@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LBO Mini-Model Builder</title>
+<style>
+  :root{
+    --blue:#1d4ed8; --blue-bg:#eff6ff; --ink:#1e293b; --muted:#64748b;
+    --line:#e2e8f0; --green:#15803d; --green-bg:#f0fdf4; --amber:#b45309;
+    --card:#ffffff; --bg:#f1f5f9; --head:#0f172a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       color:var(--ink);background:var(--bg);font-size:14px;line-height:1.45}
+  header{background:var(--head);color:#fff;padding:18px 24px}
+  header h1{margin:0;font-size:20px;font-weight:650}
+  header p{margin:4px 0 0;color:#cbd5e1;font-size:13px}
+  .wrap{max-width:1240px;margin:0 auto;padding:18px}
+  .layout{display:grid;grid-template-columns:430px 1fr;gap:18px;align-items:start}
+  @media(max-width:980px){.layout{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+  .panel h2{margin:0 0 4px;font-size:15px;font-weight:650}
+  .panel .sub{color:var(--muted);font-size:12px;margin:0 0 12px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  button{font-family:inherit;font-size:13px;border:1px solid var(--line);background:#fff;color:var(--ink);
+         padding:7px 12px;border-radius:7px;cursor:pointer;font-weight:550}
+  button:hover{background:#f8fafc}
+  button.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+  button.primary:hover{background:#1e40af}
+  .legend{font-size:12px;color:var(--muted);background:var(--blue-bg);border:1px solid #dbeafe;
+          border-radius:8px;padding:9px 12px;margin-bottom:14px}
+  .legend b{color:var(--blue)}
+  details.grp{border:1px solid var(--line);border-radius:8px;margin-bottom:10px;overflow:hidden}
+  details.grp>summary{cursor:pointer;padding:10px 12px;font-weight:600;background:#f8fafc;list-style:none;
+          display:flex;justify-content:space-between;align-items:center;font-size:13.5px}
+  details.grp>summary::-webkit-details-marker{display:none}
+  details.grp>summary::after{content:"▸";color:var(--muted);transition:transform .15s}
+  details.grp[open]>summary::after{transform:rotate(90deg)}
+  .grp-body{padding:10px 12px}
+  .fld{margin-bottom:11px}
+  .fld:last-child{margin-bottom:2px}
+  .fld label{display:block;font-weight:600;font-size:12.5px;margin-bottom:2px}
+  .fld .hlp{color:var(--muted);font-size:11.5px;margin:0 0 5px;line-height:1.4}
+  .fld input{width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;
+       font-family:inherit;color:var(--blue);font-weight:600;background:#fff}
+  .fld input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-bg)}
+  .rowN{display:grid;gap:5px;overflow-x:auto;padding-bottom:2px}
+  .rowN input{padding:5px 3px;text-align:center;font-size:12px;min-width:32px}
+  .rowN .yh{font-size:10px;color:var(--muted);text-align:center;font-weight:600}
+  .suffix{position:relative}
+  /* outputs */
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  @media(max-width:680px){.cards{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .kpi .lbl{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+  .kpi .val{font-size:26px;font-weight:700;margin-top:4px}
+  .kpi .note{font-size:11px;color:var(--muted);margin-top:2px}
+  .kpi.hl{background:linear-gradient(180deg,#eff6ff,#fff);border-color:#bfdbfe}
+  .kpi.hl .val{color:var(--blue)}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th,td{padding:6px 9px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  thead th{background:#f8fafc;font-weight:650;color:var(--head);border-bottom:2px solid var(--line)}
+  tr.major td{font-weight:700;border-top:1px solid #cbd5e1}
+  tr.sub td:first-child{padding-left:18px;color:var(--muted)}
+  .pct{color:var(--muted);font-style:normal}
+  .exit-pick{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .exit-pick select{padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;color:var(--blue);font-weight:600}
+  .sens td.diag{background:var(--blue-bg);font-weight:700;color:var(--blue)}
+  .sens .axis{background:#f8fafc;font-weight:650}
+  .sens .corner{background:#f1f5f9}
+  .toggle{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .toggle button{border:0;border-radius:0;padding:5px 12px}
+  .toggle button.on{background:var(--blue);color:#fff}
+  .note-bar{font-size:12px;color:var(--muted);margin-top:8px}
+  .guide h3{font-size:13.5px;margin:14px 0 5px}
+  .guide p{margin:0 0 8px;font-size:13px}
+  .guide table{margin:6px 0 12px;font-size:12px}
+  .pill{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11px;font-weight:650}
+  .pill.in{background:var(--blue-bg);color:var(--blue)}
+  .pill.calc{background:#f1f5f9;color:var(--muted)}
+  .warn{background:#fffbeb;border:1px solid #fde68a;color:var(--amber);padding:8px 11px;border-radius:7px;
+        font-size:12px;margin-bottom:12px;display:none}
+  footer{color:var(--muted);font-size:11.5px;text-align:center;padding:18px}
+</style>
+</head>
+<body>
+<header>
+  <h1>LBO Mini-Model Builder</h1>
+  <p>Enter the assumptions for any deal &rarr; get a full leveraged buyout model: sources &amp; uses, projections, debt paydown, and MOIC / IRR returns.</p>
+</header>
+
+<div class="wrap">
+  <div class="toolbar">
+    <button class="primary" onclick="loadExample()">Load example deal</button>
+    <button onclick="exportJSON()">Export assumptions (.json)</button>
+    <button onclick="document.getElementById('imp').click()">Import assumptions</button>
+    <input id="imp" type="file" accept="application/json" style="display:none" onchange="importJSON(event)">
+    <button onclick="window.print()">Print / Save as PDF</button>
+  </div>
+
+  <div class="layout">
+    <!-- ============ INPUTS ============ -->
+    <div>
+      <div class="panel">
+        <h2>Assumptions</h2>
+        <p class="sub">Everything in <b style="color:var(--blue)">blue</b> is yours to enter. The model recalculates instantly.</p>
+        <div class="legend">New to LBOs? Start by loading the example deal above, then change one number at a time and watch the returns move. Help text under every field explains it in plain English.</div>
+        <div class="warn" id="warn"></div>
+        <div id="inputForm"></div>
+      </div>
+    </div>
+
+    <!-- ============ OUTPUTS ============ -->
+    <div>
+      <div class="cards" id="kpis"></div>
+
+      <div class="panel">
+        <div class="exit-pick">
+          <strong>Exit year:</strong>
+          <select id="exitSel" onchange="render()"></select>
+          <span class="note-bar">The year the sponsor sells the company. Returns below are measured to this year.</span>
+        </div>
+        <div id="returnsBox"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Sources &amp; Uses</h2>
+        <p class="sub">How the purchase is funded (sources) and what the money buys (uses). They must balance.</p>
+        <div id="suBox"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Projected Financials &amp; Credit Metrics</h2>
+        <p class="sub">The operating model and how leverage falls as debt is paid down with free cash flow.</p>
+        <div style="overflow-x:auto"><div id="projBox"></div></div>
+      </div>
+
+      <div class="panel">
+        <h2>Returns by Exit Year</h2>
+        <p class="sub">MOIC = money out &divide; money in. IRR = annualized return.</p>
+        <div id="retTblBox"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Sensitivity &mdash; Entry vs Exit Multiple</h2>
+        <p class="sub">How returns change if you pay more/less going in or sell for more/less. Rows = entry multiple, columns = exit multiple, at your selected exit year.</p>
+        <div class="exit-pick">
+          <span class="toggle">
+            <button id="tgM" class="on" onclick="sensMode='moic';syncTg();render()">MOIC</button>
+            <button id="tgI" onclick="sensMode='irr';syncTg();render()">IRR</button>
+          </span>
+          <span class="note-bar">Diagonal highlight = your current entry/exit assumption.</span>
+        </div>
+        <div style="overflow-x:auto"><div id="sensBox"></div></div>
+      </div>
+
+      <div class="panel guide">
+        <h2>Guide: what you enter vs. what the model calculates</h2>
+        <p class="sub">Use this to know which numbers to pull from a CIM (Confidential Information Memorandum) and which the model derives.</p>
+        <details class="grp"><summary>Show the full input vs. calculated map</summary><div class="grp-body" id="guideBox"></div></details>
+        <details class="grp"><summary>LBO crash course (5-minute read for beginners)</summary><div class="grp-body" id="crashBox"></div></details>
+      </div>
+    </div>
+  </div>
+</div>
+<footer>Standalone tool &mdash; no data leaves your browser. Share this single HTML file with anyone. Educational model; not investment advice.</footer>
+
+<script>
+/* =================== LBO MODEL ENGINE =================== */
+function mround(x,m){return Math.round(x/m)*m;}
+function projYears(inp){return Math.max(1,Math.min(Math.round((inp.endYear||inp.startYear+5)-inp.startYear),15));}
+function computeModel(inp){
+  const N=projYears(inp); const yr=[];for(let t=0;t<=N;t++)yr.push(inp.startYear+t);
+  const g=(a,t)=>{if(!Array.isArray(a))return 0;return (a[t]!==undefined?a[t]:(a.length?a[a.length-1]:0));};
+  const rev=[],cogs=[],gp=[],sga=[],ebitda=[],dep=[],da=[],ebit=[];
+  rev[0]=inp.revenue0;cogs[0]=-inp.cogs0;gp[0]=rev[0]+cogs[0];sga[0]=-inp.sga0;
+  ebitda[0]=gp[0]+sga[0];da[0]=-inp.da0;ebit[0]=ebitda[0]+da[0];
+  const purchaseEBITDA=ebitda[0];
+  const TEV=purchaseEBITDA*inp.entryMultiple;
+  const termLoan=mround(purchaseEBITDA*inp.termXEbitda,5);
+  const revolverDraw=purchaseEBITDA*inp.revXEbitda;
+  const cashToBS=inp.minCash;
+  const uses={purchase:TEV,cashToBS,txnFees:inp.transactionFees,finFees:inp.financingFees};
+  const totalUses=uses.purchase+uses.cashToBS+uses.txnFees+uses.finFees;
+  const equityToSellers=TEV-inp.existingDebt+inp.existingCash;
+  const totalEquityNeeded=totalUses-revolverDraw-termLoan;
+  const zachProceeds=inp.zacharyCurrent*equityToSellers;
+  const otherProceeds=(1-inp.zacharyCurrent)*equityToSellers;
+  const zachRoll=Math.min(totalEquityNeeded*inp.zacharyProForma,zachProceeds);
+  const otherRoll=Math.min(totalEquityNeeded*inp.otherMgmtProForma,otherProceeds);
+  const rolloverEquity=zachRoll+otherRoll;
+  const sponsorEquity=totalUses-revolverDraw-termLoan-rolloverEquity;
+  const totalSources=revolverDraw+termLoan+rolloverEquity+sponsorEquity;
+  const initialEquity=rolloverEquity+sponsorEquity;
+  const calta0=inp.ar0+inp.inv0+inp.otherCA0+inp.otherLTA0;
+  const clltl0=inp.ap0+inp.accrued0+inp.otherLTL0;
+  const caltaRatio=calta0/rev[0], clltlRatio=clltl0/rev[0];
+  const calta=[calta0],clltl=[clltl0],changeCA=[0],changeCL=[0],capex=[0];
+  const direct=(inp.forecastMode==='direct');
+  for(let t=1;t<=N;t++){
+    if(direct){
+      rev[t]=g(inp.revDirect,t-1);
+      cogs[t]=-g(inp.cogsDirect,t-1);
+      gp[t]=rev[t]+cogs[t];
+      sga[t]=-g(inp.sgaDirect,t-1);
+      ebitda[t]=gp[t]+sga[t];
+      dep[t]=g(inp.depDirect,t-1);
+      capex[t]=-g(inp.capexDirect,t-1);
+    } else {
+      rev[t]=rev[t-1]*(1+g(inp.revGrowth,t-1));
+      gp[t]=rev[t]*g(inp.grossMargin,t-1);
+      cogs[t]=-(rev[t]-gp[t]);
+      sga[t]=-g(inp.smPct,t-1)*rev[t];
+      ebitda[t]=gp[t]+sga[t];
+      dep[t]=g(inp.depPct,t-1)*rev[t];
+      capex[t]=-g(inp.capexPct,t-1)*rev[t];
+    }
+    da[t]=-dep[t]; ebit[t]=ebitda[t]+da[t];
+    calta[t]=rev[t]*caltaRatio; clltl[t]=rev[t]*clltlRatio;
+    changeCA[t]=calta[t-1]-calta[t]; changeCL[t]=clltl[t]-clltl[t-1];
+  }
+  const cb=inp.circuitBreaker;
+  const revEnd=[revolverDraw],termEnd=[termLoan],cash=[cashToBS];
+  const grossInt=[0],cashInt=[0],finFee=[0],intInc=[0],mgmtFee=[0],pretax=[0],tax=[0],ni=[0],
+        revBorrow=[0],mandatory=[0],optional=[0],fcfArr=[0];
+  for(let t=1;t<=N;t++){revEnd[t]=revolverDraw;termEnd[t]=termLoan;cash[t]=cashToBS;ni[t]=0;}
+  for(let it=0;it<300;it++){
+    for(let t=1;t<=N;t++){
+      const libor=inp.libor0+inp.liborStep*(t-1);
+      const revRate=Math.max(libor/10000,inp.revFloor)+inp.revSpread/10000;
+      const termRate=Math.max(libor/10000,inp.termFloor)+inp.termSpread/10000;
+      const rB=revEnd[t-1],tB=termEnd[t-1];
+      const revI=(cb?(rB+revEnd[t])/2:rB)*revRate;
+      const termI=(cb?(tB+termEnd[t])/2:tB)*termRate;
+      const begU=Math.max(inp.revFacility-rB,0), endU=Math.max(inp.revFacility-revEnd[t],0);
+      const unF=(cb?(begU+endU)/2:begU)*inp.unusedFee;
+      const ff=(t<=inp.finFeeAmortYears)?inp.financingFees/inp.finFeeAmortYears:0;
+      const gInt=revI+termI+unF+ff;
+      const ii=(cb?(cash[t-1]+cash[t])/2:cash[t-1])*inp.rateOnCash;
+      const mf=Math.max(inp.mgmtFeePct*ebitda[t],inp.mgmtFeeMin);
+      const pt=ebit[t]+ii-gInt-mf;
+      const tx=pt*g(inp.taxRate,t-1);
+      const netinc=pt-tx;
+      const cfoP=netinc+dep[t]+ff+changeCA[t]+changeCL[t];
+      const cfi=capex[t];
+      const mand=-Math.min(tB,termLoan*inp.termAmort);
+      const fcfBefore=cfoP+cfi+mand;
+      const cashAvail=cash[t-1]+fcfBefore-inp.minCash;
+      const rBorrow=-Math.min(cashAvail,rB);
+      const rEnd=rB+rBorrow;
+      const sweepBase=cash[t-1]+fcfBefore-inp.minCash+rBorrow;
+      const remain=tB+mand;
+      const opt=-Math.min(remain,sweepBase*inp.termSweep);
+      const tEnd=tB+mand+opt;
+      const cff=rBorrow+mand+opt;
+      const netChange=netinc+dep[t]+ff+changeCA[t]+changeCL[t]+cfi+cff;
+      revEnd[t]=rEnd;termEnd[t]=tEnd;cash[t]=cash[t-1]+netChange;
+      grossInt[t]=gInt;cashInt[t]=gInt-ff;finFee[t]=ff;intInc[t]=ii;mgmtFee[t]=mf;
+      pretax[t]=pt;tax[t]=tx;ni[t]=netinc;revBorrow[t]=rBorrow;mandatory[t]=mand;optional[t]=opt;
+      fcfArr[t]=cfoP+cfi; // free cash flow before financing
+    }
+  }
+  const debt=[],netDebt=[],levR=[],cov=[];
+  for(let t=0;t<=N;t++){debt[t]=revEnd[t]+termEnd[t];netDebt[t]=debt[t]-cash[t];
+    levR[t]=ebitda[t]?debt[t]/ebitda[t]:0; cov[t]=(t>0&&cashInt[t])?ebitda[t]/cashInt[t]:0;}
+  function returnsAt(t,exitMult){
+    const exitEV=ebitda[t]*exitMult;
+    const eq=exitEV-debt[t]+cash[t];
+    const optPool=Math.max(eq-initialEquity,0)*inp.optionPool;
+    const eqToInv=eq-optPool;
+    const moic=eqToInv/initialEquity;
+    const irr=Math.pow(moic,1/t)-1;
+    return {exitEV,eq,optPool,eqToInv,moic,irr,hold:t};
+  }
+  return {yr,rev,cogs,gp,sga,ebitda,dep,da,ebit,intInc,grossInt,cashInt,mgmtFee,pretax,tax,ni,
+    calta,clltl,changeCA,changeCL,capex,revEnd,termEnd,cash,debt,netDebt,levR,cov,fcfArr,
+    purchaseEBITDA,TEV,termLoan,revolverDraw,cashToBS,uses,totalUses,equityToSellers,
+    rolloverEquity,sponsorEquity,totalSources,initialEquity,returnsAt};
+}
+
+/* =================== EXAMPLE DEAL DEFAULTS =================== */
+const EXAMPLE={
+  startYear:2019, endYear:2024, entryMultiple:10, exitMultiple:10, exitYear:2023, optionPool:0.10,
+  mgmtFeeMin:5, mgmtFeePct:0.05,
+  revFacility:50, revSpread:450, revFloor:0.015, revXEbitda:0,
+  termSpread:650, termFloor:0.015, termAmort:0.015, termSweep:0.75, termXEbitda:5,
+  unusedFee:0.005, minCash:0, circuitBreaker:1, finFeeAmortYears:6, rateOnCash:0.01,
+  libor0:150, liborStep:25, transactionFees:2, financingFees:6.4,
+  existingDebt:75, existingCash:47,
+  zacharyCurrent:0.60, zacharyProForma:0, otherMgmtProForma:0,
+  revenue0:454.72, cogs0:280.2397, sga0:120.613188, da0:25,
+  intInc0:0.5, intExp0:2.5, taxes0:6.98544912,
+  ar0:15.0815, inv0:26.2348, otherCA0:8.3744, otherLTA0:21.82656,
+  ap0:13.8, accrued0:36, otherLTL0:23.64544,
+  revGrowth:[0.0852,0.0804,0.0767,0.0717,0.0662],
+  grossMargin:[0.3941,0.4044,0.4142,0.4236,0.4329],
+  smPct:[0.2709,0.2728,0.2746,0.2764,0.2783],
+  taxRate:[0.26,0.26,0.26,0.26,0.26],
+  capexPct:[0.07,0.07,0.07,0.07,0.07],
+  depPct:[0.04738,0.04581,0.04475,0.04419,0.04408],
+  forecastMode:'drivers',
+  revDirect:[493.48,533.15,574.05,615.19,655.89],
+  cogsDirect:[298.98,317.52,336.29,354.59,371.94],
+  sgaDirect:[133.66,145.45,157.65,170.05,182.55],
+  depDirect:[23.38,24.42,25.69,27.19,28.91],
+  capexDirect:[34.54,37.32,40.18,43.06,45.91]
+};
+let S=JSON.parse(JSON.stringify(EXAMPLE));
+let sensMode='moic';
+const PERYEAR=['revGrowth','grossMargin','smPct','taxRate','capexPct','depPct','revDirect','cogsDirect','sgaDirect','depDirect','capexDirect'];
+function Nproj(){return Math.max(1,Math.min(Math.round((S.endYear||S.startYear+5)-S.startYear),15));}
+function resizeArrays(n){
+  PERYEAR.forEach(k=>{const a=S[k];if(!Array.isArray(a))return;
+    if(a.length<n){const last=a.length?a[a.length-1]:0;while(a.length<n)a.push(last);}
+    else if(a.length>n)a.length=n;});
+}
+
+/* =================== INPUT CONFIG =================== */
+// fmt: 'm'=$mm, '%'=percent(stored as decimal), 'x'=multiple, 'bps'=basis points, 'n'=number, 'yr'=year
+const GROUPS=[
+ {title:'1 · Purchase &amp; Exit', open:true, fields:[
+   ['entryMultiple','Entry EBITDA multiple','x','What you pay for the company, as a multiple of EBITDA. Enterprise Value = this × purchase-year EBITDA. Typical mid-market deals: 6×–12×.'],
+   ['exitMultiple','Exit EBITDA multiple','x','The multiple you assume a future buyer pays when you sell. Conservative modeling keeps this ≤ the entry multiple.'],
+   ['optionPool','Management option pool','%','Slice of exit equity value set aside for management incentives, taken out before sponsor proceeds. Often 8%–12%.']
+ ]},
+ {title:'2 · Target financials — most recent actual year', open:false, note:'Pull these from the CIM income statement for the last historical year. EBITDA is derived from these (it is not entered).', fields:[
+   ['startYear','Base / purchase year','yr','The last actual (historical) year. The deal closes at the start of the next year and the forecast runs forward from here.'],
+   ['endYear','Final projection year','yr','Last year of the forecast. Number of projected years = final year − base year (e.g. 2019 → 2026 = 7 years). Supports 1–15 years; the input columns below adjust automatically.'],
+   ['revenue0','Revenue','m','Latest full-year sales, in $ millions.'],
+   ['cogs0','Cost of goods sold (COGS)','m','Direct cost of producing the product/service, entered as a positive number in $mm.'],
+   ['sga0','SG&A / operating expense','m','Selling, general & administrative costs (overhead), positive $mm.'],
+   ['da0','Depreciation & amortization','m','Non-cash D&A for the base year, positive $mm.'],
+   ['taxes0','Income taxes (base year)','m','Base-year tax expense, positive $mm (informational; projections use the tax-rate driver).']
+ ]},
+ {title:'3 · Multi-year forecast', open:false, forecast:true,
+   note:'One column per projected year (the base and final year are set in section 2 above; the columns below adjust automatically). Pick how you want to enter each year:',
+   drivers:[
+     ['revGrowth','Revenue growth','%','Year-over-year sales growth. Often fades over time as the business matures.'],
+     ['grossMargin','Gross margin','%','Gross profit ÷ revenue. Can expand with scale or contract with competition.'],
+     ['smPct','SG&A % of revenue','%','Operating expense as a share of sales. Falling = operating leverage.'],
+     ['capexPct','CapEx % of revenue','%','Capital expenditures ÷ revenue. Asset-heavy businesses run higher.'],
+     ['depPct','Depreciation % of revenue','%','Depreciation ÷ revenue. Usually tracks near CapEx % over time.']
+   ],
+   direct:[
+     ['revDirect','Revenue ($mm)','m','Total sales for each projected year, straight from a CIM projection or your own forecast.'],
+     ['cogsDirect','COGS ($mm)','m','Cost of goods sold per year, positive $mm.'],
+     ['sgaDirect','SG&A ($mm)','m','Operating expense per year, positive $mm.'],
+     ['depDirect','Depreciation ($mm)','m','Depreciation per year, positive $mm.'],
+     ['capexDirect','CapEx ($mm)','m','Capital expenditures per year, positive $mm.']
+   ],
+   always:[
+     ['taxRate','Tax rate','%','Effective corporate tax rate on pre-tax income — applies in either mode.']
+   ]
+ },
+ {title:'4 · Working capital & balance sheet — base year', open:false, note:'Base-year balances in $mm. The model grows each item with revenue, holding its % of sales constant. Changes in these become cash in/out.', fields:[
+   ['ar0','Accounts receivable','m','Money owed by customers.'],
+   ['inv0','Inventory','m','Goods on hand.'],
+   ['otherCA0','Other current assets','m','Prepaids and other short-term assets.'],
+   ['otherLTA0','Other long-term assets','m','Non-PP&E long-term operating assets.'],
+   ['ap0','Accounts payable','m','Money owed to suppliers.'],
+   ['accrued0','Accrued liabilities & other','m','Accrued expenses and other current liabilities.'],
+   ['otherLTL0','Other long-term liabilities','m','Long-term operating liabilities.']
+ ]},
+ {title:'5 · Debt structure', open:false, note:'How the deal is financed. Term Loan is the main acquisition debt; the Revolver is a flexible credit line for working capital swings. Spreads are over the benchmark rate (LIBOR/SOFR).', fields:[
+   ['termXEbitda','Term loan size (× EBITDA)','x','Acquisition debt as a multiple of purchase EBITDA. 4×–6× is common. This sets your opening leverage.'],
+   ['termSpread','Term loan spread','bps','Interest margin over the benchmark rate, in basis points (100 bps = 1.0%).'],
+   ['termFloor','Term loan rate floor','%','Minimum benchmark rate used even if the index falls below it.'],
+   ['termAmort','Term loan mandatory amortization','%','Required annual principal repayment, as % of the original loan (e.g. 1% per year).'],
+   ['termSweep','Cash sweep %','%','Share of leftover free cash flow used to pre-pay the term loan each year. Higher = faster deleveraging.'],
+   ['revFacility','Revolver facility size','m','Total revolver credit line available, $mm.'],
+   ['revXEbitda','Revolver drawn at close (× EBITDA)','x','Amount drawn on day one. Usually 0 — the revolver is backup liquidity.'],
+   ['revSpread','Revolver spread','bps','Interest margin over benchmark on drawn revolver, in bps.'],
+   ['revFloor','Revolver rate floor','%','Benchmark floor for the revolver.'],
+   ['unusedFee','Unused revolver fee','%','Annual fee on the undrawn portion of the revolver (commitment fee).']
+ ]},
+ {title:'6 · Rates, fees & financing mechanics', open:false, fields:[
+   ['libor0','Benchmark rate, Year 1','bps','Starting LIBOR/SOFR in basis points (e.g. 150 = 1.50%).'],
+   ['liborStep','Benchmark rate step / year','bps','How much the benchmark rises each year (rate-curve assumption).'],
+   ['rateOnCash','Interest earned on cash','%','Yield on cash sitting on the balance sheet.'],
+   ['transactionFees','Transaction (advisory) fees','m','M&A advisory, legal, diligence fees paid at close, $mm.'],
+   ['financingFees','Financing fees','m','Fees to arrange the debt, $mm. Amortized over the life below.'],
+   ['finFeeAmortYears','Financing fee amortization (years)','n','Years over which financing fees are expensed (non-cash).'],
+   ['minCash','Minimum cash on balance sheet','m','Cash the business must always hold; also the cash funded at close, $mm.'],
+   ['circuitBreaker','Average-interest toggle (1 or 0)','n','1 = charge interest on the average of beginning & ending debt (more accurate). 0 = on beginning balance only.']
+ ]},
+ {title:'7 · Entry equity & ownership', open:false, note:'Used to compute proceeds to current owners and any equity they roll into the new deal. For a simple all-cash buyout, leave roll-over at 0.', fields:[
+   ['existingDebt','Target existing debt (repaid at close)','m','Debt already on the target that the deal pays off, $mm. Reduces equity to sellers.'],
+   ['existingCash','Target existing cash (to sellers)','m','Cash on the target at close, $mm. Adds to equity to sellers.'],
+   ['zacharyCurrent','Lead owner current stake','%','Ownership % of the main existing shareholder before the deal.'],
+   ['zacharyProForma','Lead owner roll-over stake','%','% of the NEW equity the lead owner takes by rolling over proceeds. 0 = full cash-out.'],
+   ['otherMgmtProForma','Other mgmt roll-over stake','%','% of new equity other managers roll into. 0 = full cash-out.'],
+   ['mgmtFeePct','Sponsor management fee (% EBITDA)','%','Annual fee the PE sponsor charges the company, as % of EBITDA.'],
+   ['mgmtFeeMin','Sponsor management fee minimum','m','Floor on the annual sponsor fee, $mm.']
+ ]}
+];
+
+/* =================== FORMAT HELPERS =================== */
+const fmtM=x=>(x<0?'-':'')+'$'+Math.abs(x).toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1});
+const fmtP=x=>(x*100).toFixed(1)+'%';
+const fmtX=x=>x.toFixed(2)+'×';
+const fmtN=x=>x.toLocaleString(undefined,{maximumFractionDigits:1});
+function toField(fmt,v){ // model value -> input display value
+  if(fmt==='%')return (v*100);
+  return v;
+}
+function fromField(fmt,raw){
+  let v=parseFloat(raw); if(isNaN(v))v=0;
+  if(fmt==='%')return v/100;
+  return v;
+}
+function fieldStep(fmt){return fmt==='%'?0.1:(fmt==='x'?0.25:(fmt==='bps'?5:1));}
+
+/* =================== RENDER INPUTS =================== */
+function buildInputs(){
+  resizeArrays(Nproj());
+  const host=document.getElementById('inputForm'); host.innerHTML='';
+  GROUPS.forEach(g=>{
+    const d=document.createElement('details'); d.className='grp'; if(g.open)d.open=true;
+    let h='<summary>'+g.title+'</summary><div class="grp-body">';
+    if(g.note)h+='<p class="hlp" style="margin:-2px 0 10px">'+g.note+'</p>';
+    if(g.fields){
+      g.fields.forEach(f=>{
+        const[key,label,fmt,help]=f;
+        h+='<div class="fld"><label>'+label+'</label><p class="hlp">'+help+'</p>'+
+           '<input type="number" step="'+fieldStep(fmt)+'" data-key="'+key+'" data-fmt="'+fmt+'"></div>';
+      });
+    }
+    if(g.perYear){ g.perYear.forEach(f=>{ h+=renderPerYear(f); }); }
+    if(g.forecast){ FORECAST_GROUP=g; h+='<div id="forecastBody">'+renderForecastBody(g)+'</div>'; }
+    h+='</div>'; d.innerHTML=h; host.appendChild(d);
+  });
+  host.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',onInput));
+  fillInputs();
+  applyForecast();
+}
+let FORECAST_GROUP=null;
+function renderPerYear(f){
+  const[key,label,fmt,help]=f; const n=Nproj();
+  let head='',boxes='';
+  for(let i=0;i<n;i++){
+    head+='<div class="yh">'+(S.startYear+i+1)+'</div>';
+    boxes+='<input type="number" step="'+fieldStep(fmt)+'" data-key="'+key+'" data-fmt="'+fmt+'" data-i="'+i+'">';
+  }
+  return '<div class="fld"><label>'+label+'</label><p class="hlp">'+help+'</p>'+
+    '<div class="rowN" style="grid-template-columns:repeat('+n+',minmax(32px,1fr))">'+head+boxes+'</div></div>';
+}
+function renderForecastBody(g){
+  return '<div class="toggle" style="margin:2px 0 12px">'+
+    '<button id="fmDrv" type="button" onclick="setForecast(\'drivers\')">% growth &amp; margins</button>'+
+    '<button id="fmDir" type="button" onclick="setForecast(\'direct\')">Enter $ figures</button></div>'+
+    '<div id="fcDrivers">'+g.drivers.map(renderPerYear).join('')+'</div>'+
+    '<div id="fcDirect">'+g.direct.map(renderPerYear).join('')+'</div>'+
+    '<div style="border-top:1px dashed var(--line);margin:10px 0 4px"></div>'+
+    g.always.map(renderPerYear).join('');
+}
+function onYearChange(){
+  resizeArrays(Nproj());
+  const fb=document.getElementById('forecastBody');
+  if(fb){
+    fb.innerHTML=renderForecastBody(FORECAST_GROUP);
+    fb.querySelectorAll('input[data-key]').forEach(inp=>inp.addEventListener('input',onInput));
+    fillInputs(fb); applyForecast();
+  }
+  buildExitSel(); render();
+}
+function setForecast(mode){ S.forecastMode=mode; applyForecast(); render(); }
+function applyForecast(){
+  const drv=document.getElementById('fcDrivers'), dir=document.getElementById('fcDirect');
+  const isDir=S.forecastMode==='direct';
+  if(drv)drv.style.display=isDir?'none':'block';
+  if(dir)dir.style.display=isDir?'block':'none';
+  const bd=document.getElementById('fmDrv'),bi=document.getElementById('fmDir');
+  if(bd)bd.classList.toggle('on',!isDir);
+  if(bi)bi.classList.toggle('on',isDir);
+}
+function fillInputs(root){
+  const scope=root||document.getElementById('inputForm');
+  scope.querySelectorAll('input[data-key]').forEach(inp=>{
+    const k=inp.dataset.key,fmt=inp.dataset.fmt,i=inp.dataset.i;
+    let v=(i!==undefined)?(S[k]?S[k][+i]:undefined):S[k];
+    if(v===undefined||v===null||isNaN(v))v=0;
+    inp.value=+toField(fmt,v).toFixed(fmt==='%'?2:4);
+  });
+}
+function onInput(e){
+  const inp=e.target,k=inp.dataset.key,fmt=inp.dataset.fmt,i=inp.dataset.i;
+  const v=fromField(fmt,inp.value);
+  if(i!==undefined){ if(!Array.isArray(S[k]))S[k]=[]; S[k][+i]=v; } else S[k]=v;
+  if(k==='startYear'||k==='endYear') onYearChange(); else render();
+}
+
+/* =================== RENDER OUTPUTS =================== */
+function buildExitSel(){
+  const sel=document.getElementById('exitSel'); sel.innerHTML='';
+  const n=Nproj();
+  for(let t=1;t<=n;t++){const o=document.createElement('option');o.value=t;o.textContent=(S.startYear+t)+'  (Year '+t+')';sel.appendChild(o);}
+  sel.value=Math.min(Math.max((S.exitYear||S.startYear+n)-S.startYear,1),n);
+}
+function render(){
+  // guard
+  const w=document.getElementById('warn');
+  if(S.entryMultiple<=0||S.revenue0<=0){w.style.display='block';w.textContent='Entry multiple and base revenue must be greater than 0.';return;}
+  if(!(S.endYear>S.startYear)){w.style.display='block';w.textContent='Final projection year must be after the base year.';return;}
+  w.style.display='none';
+  const N=Nproj();
+  const m=computeModel(S);
+  let tExit=parseInt(document.getElementById('exitSel').value)||Math.min(Math.max((S.exitYear||S.startYear+N)-S.startYear,1),N);
+  if(tExit>N)tExit=N;
+  const r=m.returnsAt(tExit,S.exitMultiple);
+
+  // KPIs
+  document.getElementById('kpis').innerHTML=
+    card('MOIC',(r.moic).toFixed(2)+'×','Money out ÷ money in · '+r.hold+'-yr hold',true)+
+    card('IRR',fmtP(r.irr),'Annualized return',true)+
+    card('Entry leverage',m.levR[0].toFixed(2)+'× ','Total debt ÷ EBITDA at close')+
+    card('Exit leverage',m.levR[tExit].toFixed(2)+'× ','At '+(S.startYear+tExit));
+
+  // returns box
+  document.getElementById('returnsBox').innerHTML=
+   '<table><tbody>'+
+   row('Exit EBITDA ('+(S.startYear+tExit)+')',fmtM(m.ebitda[tExit]))+
+   row('× Exit multiple',fmtX(S.exitMultiple))+
+   row('Exit enterprise value',fmtM(r.exitEV),'major')+
+   row('Less: net debt at exit',fmtM(-(m.debt[tExit]-m.cash[tExit])))+
+   row('Exit equity value',fmtM(r.eq),'major')+
+   row('Less: management option pool',fmtM(-r.optPool))+
+   row('Equity proceeds to investors',fmtM(r.eqToInv),'major')+
+   row('Initial equity invested',fmtM(-m.initialEquity))+
+   '</tbody></table>';
+
+  // sources & uses
+  const u=m.uses;
+  document.getElementById('suBox').innerHTML=
+   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">'+
+   '<table><thead><tr><th>Sources</th><th>$mm</th><th>× EBITDA</th></tr></thead><tbody>'+
+   surow('Revolver',m.revolverDraw,m)+surow('Term loan',m.termLoan,m)+
+   surow('Roll-over equity',m.rolloverEquity,m)+surow('Sponsor equity',m.sponsorEquity,m)+
+   '<tr class="major"><td>Total sources</td><td>'+fmtM(m.totalSources)+'</td><td>'+(m.totalSources/m.purchaseEBITDA).toFixed(2)+'×</td></tr>'+
+   '</tbody></table>'+
+   '<table><thead><tr><th>Uses</th><th>$mm</th><th>× EBITDA</th></tr></thead><tbody>'+
+   surow('Purchase price',u.purchase,m)+surow('Cash to balance sheet',u.cashToBS,m)+
+   surow('Transaction fees',u.txnFees,m)+surow('Financing fees',u.finFees,m)+
+   '<tr class="major"><td>Total uses</td><td>'+fmtM(m.totalUses)+'</td><td>'+(m.totalUses/m.purchaseEBITDA).toFixed(2)+'×</td></tr>'+
+   '</tbody></table></div>'+
+   '<p class="note-bar">Purchase EBITDA '+fmtM(m.purchaseEBITDA)+' · Enterprise value '+fmtM(m.TEV)+' ('+S.entryMultiple.toFixed(2)+'×) · Equity value to sellers '+fmtM(m.equityToSellers)+'</p>';
+
+  // projections
+  let p='<table><thead><tr><th>$ in millions</th>';
+  for(let t=0;t<=N;t++)p+='<th>'+m.yr[t]+(t===0?' A':'')+'</th>';
+  p+='</tr></thead><tbody>';
+  p+=prow('Revenue',m.rev,fmtM);
+  p+=prowPct('  growth',m.rev.map((v,t)=>t?m.rev[t]/m.rev[t-1]-1:null));
+  p+=prow('EBITDA',m.ebitda,fmtM,'major');
+  p+=prowPct('  margin',m.ebitda.map((v,t)=>v/m.rev[t]));
+  p+=prow('Net income',m.ni,fmtM);
+  p+=prow('Free cash flow',m.fcfArr,fmtM);
+  p+=prow('Cash',m.cash,fmtM,'major');
+  p+=prow('Total debt',m.debt,fmtM);
+  p+=prow('Net debt',m.netDebt,fmtM);
+  p+=prowX('Debt / EBITDA',m.levR,'major');
+  p+=prowX('EBITDA / cash interest',m.cov);
+  p+='</tbody></table>';
+  document.getElementById('projBox').innerHTML=p;
+
+  // returns by year
+  let rt='<table><thead><tr><th>Exit year</th>';
+  for(let t=1;t<=N;t++)rt+='<th>'+(S.startYear+t)+'</th>';
+  rt+='</tr></thead><tbody><tr><td>MOIC</td>';
+  for(let t=1;t<=N;t++){const rr=m.returnsAt(t,S.exitMultiple);rt+='<td'+(t===tExit?' class="diag"':'')+'>'+rr.moic.toFixed(2)+'×</td>';}
+  rt+='</tr><tr><td>IRR</td>';
+  for(let t=1;t<=N;t++){const rr=m.returnsAt(t,S.exitMultiple);rt+='<td'+(t===tExit?' class="diag"':'')+'>'+fmtP(rr.irr)+'</td>';}
+  rt+='</tr></tbody></table>';
+  document.getElementById('retTblBox').innerHTML='<div style="overflow-x:auto">'+rt+'</div>';
+
+  // sensitivity
+  const entries=[-1,-0.5,0,0.5,1].map(d=>+(S.entryMultiple+d).toFixed(2));
+  const exits=[-1,-0.5,0,0.5,1].map(d=>+(S.exitMultiple+d).toFixed(2));
+  let sg='<table class="sens"><thead><tr><th class="corner">'+(sensMode==='moic'?'MOIC':'IRR')+'</th>'+
+         '<th colspan="5" style="text-align:center">Exit multiple →</th></tr><tr><th class="corner">Entry ↓</th>';
+  exits.forEach(x=>sg+='<th class="axis">'+x.toFixed(2)+'×</th>');
+  sg+='</tr></thead><tbody>';
+  entries.forEach(en=>{
+    sg+='<tr><td class="axis">'+en.toFixed(2)+'×</td>';
+    exits.forEach(ex=>{
+      const mm=computeModel(Object.assign({},S,{entryMultiple:en}));
+      const rr=mm.returnsAt(tExit,ex);
+      const isDiag=(Math.abs(en-S.entryMultiple)<1e-9 && Math.abs(ex-S.exitMultiple)<1e-9);
+      const val=sensMode==='moic'?rr.moic.toFixed(2)+'×':fmtP(rr.irr);
+      sg+='<td'+(isDiag?' class="diag"':'')+'>'+val+'</td>';
+    });
+    sg+='</tr>';
+  });
+  sg+='</tbody></table>';
+  document.getElementById('sensBox').innerHTML=sg;
+}
+
+function card(l,v,n,hl){return '<div class="kpi'+(hl?' hl':'')+'"><div class="lbl">'+l+'</div><div class="val">'+v+'</div><div class="note">'+n+'</div></div>';}
+function row(l,v,cls){return '<tr'+(cls?' class="'+cls+'"':'')+'><td>'+l+'</td><td>'+v+'</td></tr>';}
+function surow(l,v,m){return '<tr><td>'+l+'</td><td>'+fmtM(v)+'</td><td>'+(v/m.purchaseEBITDA).toFixed(2)+'×</td></tr>';}
+function prow(l,arr,fmt,cls){let s='<tr'+(cls?' class="'+cls+'"':'')+'><td>'+l+'</td>';for(let t=0;t<arr.length;t++)s+='<td>'+(arr[t]==null?'—':fmt(arr[t]))+'</td>';return s+'</tr>';}
+function prowPct(l,arr){let s='<tr class="sub"><td>'+l.trim()+'</td>';for(let t=0;t<arr.length;t++)s+='<td class="pct">'+(arr[t]==null?'—':fmtP(arr[t]))+'</td>';return s+'</tr>';}
+function prowX(l,arr,cls){let s='<tr'+(cls?' class="'+cls+'"':'')+'><td>'+l+'</td>';for(let t=0;t<arr.length;t++)s+='<td>'+(arr[t]?arr[t].toFixed(2)+'×':'—')+'</td>';return s+'</tr>';}
+
+/* =================== ACTIONS =================== */
+function loadExample(){S=JSON.parse(JSON.stringify(EXAMPLE));buildInputs();buildExitSel();render();}
+function exportJSON(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='lbo-assumptions.json';a.click();}
+function importJSON(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{S=Object.assign(JSON.parse(JSON.stringify(EXAMPLE)),JSON.parse(r.result));buildInputs();buildExitSel();render();}catch(x){alert('Invalid file');}};r.readAsText(f);}
+function syncTg(){document.getElementById('tgM').classList.toggle('on',sensMode==='moic');document.getElementById('tgI').classList.toggle('on',sensMode==='irr');}
+
+/* =================== GUIDE CONTENT =================== */
+function buildGuide(){
+  const rows=[
+   ['Entry & exit EBITDA multiples','in','From the CIM / your judgment on comparable deal valuations.'],
+   ['Base-year revenue, COGS, SG&A, D&A, taxes','in','Straight from the CIM income statement (last actual year).'],
+   ['Operating drivers (growth, margins, tax, CapEx, dep %)','in','Your forecast assumptions per year — the heart of the model.'],
+   ['Working-capital & balance-sheet base balances','in','From the CIM balance sheet; grown with revenue thereafter.'],
+   ['Debt sizing, spreads, floors, amortization, cash sweep','in','From lender term sheets / market norms.'],
+   ['Fees, benchmark rate, ownership & roll-over','in','From the deal structure and financing package.'],
+   ['Purchase EBITDA','calc','= base-year EBITDA, derived from the income statement you entered.'],
+   ['Enterprise value, Sources & Uses','calc','= EBITDA × entry multiple; sponsor equity is the balancing plug.'],
+   ['Full income statement, balance sheet, cash flow (Yr 1–5)','calc','Projected from your drivers.'],
+   ['Debt & interest schedules','calc','Mandatory amort + cash sweep pay down debt; interest is solved circularly.'],
+   ['Credit metrics (Debt/EBITDA, interest coverage)','calc','Derived each year from the schedules.'],
+   ['Exit equity value, MOIC, IRR, sensitivities','calc','Derived from projected EBITDA, debt and cash at the exit year.']
+  ];
+  let h='<table><thead><tr><th>Item</th><th>Type</th><th>Where it comes from</th></tr></thead><tbody>';
+  rows.forEach(r=>h+='<tr><td style="text-align:left">'+r[0]+'</td><td><span class="pill '+(r[1]==='in'?'in">You enter':'calc">Calculated')+'</span></td><td style="text-align:left">'+r[2]+'</td></tr>');
+  h+='</tbody></table>';
+  document.getElementById('guideBox').innerHTML=h;
+
+  document.getElementById('crashBox').innerHTML=
+  '<h3>The one-line idea</h3><p>In a leveraged buyout you buy a company mostly with borrowed money, use the company’s own cash flow to pay that debt down, then sell a few years later. Because you only put in a slice of equity, paying down debt and any growth in value get magnified into your return.</p>'+
+  '<h3>The three return drivers</h3><p><b>1. Deleveraging</b> — every dollar of debt repaid becomes a dollar of equity value. <b>2. EBITDA growth</b> — growing profit raises the sale price. <b>3. Multiple change</b> — selling at a higher multiple than you paid helps; a lower one hurts. The sensitivity table shows drivers 1 and 3 directly.</p>'+
+  '<h3>How to read the outputs</h3><p><b>MOIC</b> (multiple of invested capital) of 2.0× means you doubled your money. <b>IRR</b> is that same return expressed per year — roughly 15–25% is a common PE target. <b>Debt / EBITDA</b> shows leverage; it should fall each year as debt is repaid. <b>Interest coverage</b> (EBITDA ÷ interest) should rise — above ~2× is healthier.</p>'+
+  '<h3>Sensible starting assumptions if you’re unsure</h3><p>Exit multiple = entry multiple (don’t assume you’ll sell for more). Term loan 4–6× EBITDA. Mandatory amortization ~1%/yr. Cash sweep 50–75%. Tax rate ~25%. Hold drivers flat at the base year unless you have a reason to change them. Then stress-test with the sensitivity table.</p>'+
+  '<h3>Setting the years &amp; entering multi-year data</h3><p>In the <b>Target financials</b> section set the <b>base year</b> (your latest actual year) and the <b>final projection year</b> — the forecast runs from one to the other, so you can model any horizon from 1 to 15 years. The input columns and every output table resize automatically. For the projected years, open <b>Multi-year forecast</b> and choose a method: <b>“% growth &amp; margins”</b> lets you type a growth rate and margin for each year, while <b>“Enter $ figures”</b> lets you paste each year’s revenue, COGS, SG&amp;A, depreciation and CapEx in dollars — useful when a CIM already gives you a full projection. Extra historical years beyond the base year aren’t needed; an LBO projects forward from the most recent actuals.</p>'+
+  '<p class="note-bar">This tool implements standard LBO mechanics, including the cash-flow sweep and the circular interest calculation.</p>';
+}
+
+/* init */
+buildInputs();buildExitSel();buildGuide();render();syncTg();
+</script>
+</body>
+</html>
