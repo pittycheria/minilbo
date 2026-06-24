@@ -64,6 +64,11 @@
   thead th{background:#f8fafc;font-weight:650;color:var(--head);border-bottom:2px solid var(--line)}
   tr.major td{font-weight:700;border-top:1px solid #cbd5e1}
   tr.sub td:first-child{padding-left:18px;color:var(--muted)}
+  table.model td.rn{color:var(--muted);text-align:right;width:26px;font-size:11px}
+  table.model td:nth-child(2){text-align:left}
+  table.model tr.sec td{background:#eef2f7;font-weight:700;color:var(--head);text-transform:uppercase;font-size:10.5px;letter-spacing:.05em}
+  table.model td.calc{color:var(--blue);font-size:11px;font-family:ui-monospace,Menlo,Consolas,monospace;text-align:left;white-space:nowrap;background:#fbfdff}
+  table.model tr.sub td:nth-child(2){padding-left:16px;color:var(--muted);font-style:italic}
   .pct{color:var(--muted);font-style:normal}
   .exit-pick{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
   .exit-pick select{padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;color:var(--blue);font-weight:600}
@@ -616,23 +621,54 @@ function render(){
    '</tbody></table></div>'+
    '<p class="note-bar">Purchase EBITDA '+fmtM(m.purchaseEBITDA)+' · Enterprise value '+fmtM(m.TEV)+' ('+S.entryMultiple.toFixed(2)+'×) · Equity value to sellers '+fmtM(m.equityToSellers)+'</p>';
 
-  // projections
-  let p='<table><thead><tr><th>$ in millions</th>';
-  for(let t=0;t<=N;t++)p+='<th>'+m.yr[t]+(t===0?' A':'')+'</th>';
-  p+='</tr></thead><tbody>';
-  p+=prow('Revenue',m.rev,fmtM);
-  p+=prowPct('  growth',m.rev.map((v,t)=>t?m.rev[t]/m.rev[t-1]-1:null));
-  p+=prow('EBITDA',m.ebitda,fmtM,'major');
-  p+=prowPct('  margin',m.ebitda.map((v,t)=>v/m.rev[t]));
-  p+=prow('Net income',m.ni,fmtM);
-  p+=prow('Free cash flow',m.fcfArr,fmtM);
-  p+=prow('Cash',m.cash,fmtM,'major');
-  p+=prow('Total debt',m.debt,fmtM);
-  p+=prow('Net debt',m.netDebt,fmtM);
-  p+=prowX('Debt / EBITDA',m.levR,'major');
-  p+=prowX('EBITDA / cash interest',m.cov);
-  p+='</tbody></table>';
-  document.getElementById('projBox').innerHTML=p;
+  // projections — full line-item model with row numbers + a Calculation column
+  {
+    const ii0=S.intInc0, ie0=-S.intExp0, mf0=0, pt0=m.ebit[0]+ii0+ie0+mf0, tax0=-S.taxes0, ni0=pt0+tax0;
+    const ff=function(t){return (t>=1&&t<=S.finFeeAmortYears)?S.financingFees/S.finFeeAmortYears:0;};
+    const A=function(fn){var a=[];for(var t=0;t<=N;t++)a.push(fn(t));return a;};
+    const Z=null;
+    const rows=[
+      {h:'Income statement'},
+      {n:1,l:'Revenue',v:m.rev,f:'prior × (1 + growth %)'},
+      {sub:1,l:'% growth',v:A(function(t){return t?m.rev[t]/m.rev[t-1]-1:Z;}),p:1,f:'L1 ÷ prior L1 − 1'},
+      {n:2,l:'Cost of goods sold',v:m.cogs,f:'−(1 − gross margin) × L1'},
+      {n:3,l:'Gross profit',v:m.gp,f:'L1 + L2',mj:1},
+      {n:4,l:'SG&A (operating expense)',v:m.sga,f:'−(SG&A %) × L1'},
+      {n:5,l:'EBITDA',v:m.ebitda,f:'L3 + L4',mj:1},
+      {sub:1,l:'% margin',v:A(function(t){return m.ebitda[t]/m.rev[t];}),p:1,f:'L5 ÷ L1'},
+      {n:6,l:'Depreciation & amortization',v:m.da,f:'−(Dep %) × L1'},
+      {n:7,l:'EBIT',v:m.ebit,f:'L5 + L6'},
+      {n:8,l:'Interest expense',v:A(function(t){return t===0?ie0:-m.grossInt[t];}),f:'from debt schedule'},
+      {n:9,l:'Management fee',v:A(function(t){return t===0?mf0:-m.mgmtFee[t];}),f:'−max(fee% × L5, min)'},
+      {n:10,l:'Pre-tax income',v:A(function(t){return t===0?pt0:m.pretax[t];}),f:'L7 + L8 + L9'},
+      {n:11,l:'Taxes',v:A(function(t){return t===0?tax0:-m.tax[t];}),f:'−(tax %) × L10'},
+      {n:12,l:'Net income',v:A(function(t){return t===0?ni0:m.ni[t];}),f:'L10 + L11',mj:1},
+      {h:'Cash flow'},
+      {n:13,l:'(+) D&A add-back',v:A(function(t){return t===0?Z:-m.da[t];}),f:'− L6'},
+      {n:14,l:'(+) Financing-fee amortization',v:A(function(t){return t===0?Z:ff(t);}),f:'financing fees ÷ amort years'},
+      {n:15,l:'(±) Change in working capital',v:A(function(t){return t===0?Z:m.changeCA[t]+m.changeCL[t];}),f:'Δ(CA+LTA) + Δ(CL+LTL)'},
+      {n:16,l:'(−) Capital expenditures',v:A(function(t){return t===0?Z:m.capex[t];}),f:'−(CapEx %) × L1'},
+      {n:17,l:'Free cash flow',v:A(function(t){return t===0?Z:m.fcfArr[t];}),f:'L12+L13+L14+L15+L16',mj:1},
+      {h:'Debt & credit'},
+      {n:18,l:'Total debt (end of year)',v:m.debt,f:'prior L18 − L19'},
+      {n:19,l:'(Repaid) / borrowed',v:A(function(t){return t===0?Z:m.debt[t-1]-m.debt[t];}),f:'prior L18 − L18'},
+      {n:20,l:'Cash (end of year)',v:m.cash,f:'prior L20 + L17 − L19'},
+      {n:21,l:'Net debt',v:m.netDebt,f:'L18 − L20',mj:1},
+      {n:22,l:'Debt / EBITDA',v:m.levR,f:'L18 ÷ L5',x:1,mj:1},
+      {n:23,l:'EBITDA / cash interest',v:A(function(t){return m.cov[t]||null;}),f:'L5 ÷ cash interest',x:1}
+    ];
+    let p='<table class="model"><thead><tr><th>#</th><th>$ in millions</th>';
+    for(let t=0;t<=N;t++)p+='<th>'+m.yr[t]+(t===0?' A':'')+'</th>';
+    p+='<th>Calculation</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      if(r.h){ p+='<tr class="sec"><td></td><td colspan="'+(N+3)+'">'+r.h+'</td></tr>'; return; }
+      p+='<tr'+(r.mj?' class="major"':(r.sub?' class="sub"':''))+'><td class="rn">'+(r.n||'')+'</td><td>'+r.l+'</td>';
+      for(let t=0;t<=N;t++){ var val=r.v[t]; var cell=(val==null?'—':(r.p?fmtP(val):(r.x?val.toFixed(2)+'×':fmtM(val)))); p+='<td'+(r.sub?' class="pct"':'')+'>'+cell+'</td>'; }
+      p+='<td class="calc">'+(r.f||'')+'</td></tr>';
+    });
+    p+='</tbody></table>';
+    document.getElementById('projBox').innerHTML=p;
+  }
 
   // returns by year
   let rt='<table><thead><tr><th>Exit year</th>';
