@@ -112,6 +112,9 @@
   .lnk{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0}
   .lnk:hover{color:var(--blue)}
   .typing{font-style:italic;color:var(--muted)}
+  .proxy-row{display:flex;gap:6px;padding:8px 12px;background:var(--blue-bg);border-top:1px solid var(--line)}
+  .proxy-row input{flex:1;border:1px solid #cbd5e1;border-radius:8px;padding:7px;font-size:12px;font-family:inherit}
+  .proxy-row button{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:0 13px;font-weight:600;cursor:pointer}
   .chat-input{display:flex;gap:6px;padding:9px;border-top:1px solid var(--line);background:#fff}
   .chat-input input{flex:1;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:12.5px;font-family:inherit}
   .chat-input button{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:0 14px;font-weight:600;cursor:pointer}
@@ -134,6 +137,10 @@
   </div>
   <div class="legend" style="margin:-4px 0 14px">
     <b>Tip — saving &amp; sharing a deal:</b> this tool doesn’t remember your numbers after you close the tab. Click <b>Export assumptions</b> to save your current inputs as a small <code>.json</code> file (one per deal or scenario). Later, click <b>Import assumptions</b> and pick that file to reload everything exactly as it was — or email the file to a colleague so they see <i>your</i> numbers. The shared web link only opens a blank tool; the <code>.json</code> file is what carries a specific deal.
+  </div>
+
+  <div class="panel guide" style="margin-bottom:16px">
+    <details class="grp" open><summary>New to LBOs? Start here</summary><div class="grp-body" id="crashBox"></div></details>
   </div>
 
   <div class="layout">
@@ -197,7 +204,6 @@
         <h2>Guide: what you enter vs. what the model calculates</h2>
         <p class="sub">Use this to know which numbers to pull from a CIM (Confidential Information Memorandum) and which the model derives.</p>
         <details class="grp"><summary>Show the full input vs. calculated map</summary><div class="grp-body" id="guideBox"></div></details>
-        <details class="grp"><summary>LBO crash course (5-minute read for beginners)</summary><div class="grp-body" id="crashBox"></div></details>
       </div>
     </div>
   </div>
@@ -216,6 +222,10 @@
     <label class="aim"><input type="checkbox" id="aiToggle" onchange="toggleAI()"> AI mode</label>
     <span id="aiStatus" class="ai-status">built-in explainer</span>
     <button class="lnk" onclick="setProxy()" title="Set your AI proxy URL">&#9881;</button>
+  </div>
+  <div id="proxyRow" class="proxy-row" style="display:none">
+    <input id="proxyInput" placeholder="https://...workers.dev" autocomplete="off" spellcheck="false">
+    <button onclick="saveProxy()">Save</button>
   </div>
   <div class="chat-input">
     <input id="chatBox" placeholder="e.g. how is sponsor equity calculated?" onkeydown="if(event.key==='Enter'){sendChat();}">
@@ -697,7 +707,7 @@ function buildGuide(){
   '<h3>The one-line idea</h3><p>In a leveraged buyout you buy a company mostly with borrowed money, use the company’s own cash flow to pay that debt down, then sell a few years later. Because you only put in a slice of equity, paying down debt and any growth in value get magnified into your return.</p>'+
   '<h3>The three return drivers</h3><p><b>1. Deleveraging</b> — every dollar of debt repaid becomes a dollar of equity value. <b>2. EBITDA growth</b> — growing profit raises the sale price. <b>3. Multiple change</b> — selling at a higher multiple than you paid helps; a lower one hurts. The sensitivity table shows drivers 1 and 3 directly.</p>'+
   '<h3>How to read the outputs</h3><p><b>MOIC</b> (multiple of invested capital) of 2.0× means you doubled your money. <b>IRR</b> is that same return expressed per year — roughly 15–25% is a common PE target. <b>Debt / EBITDA</b> shows leverage; it should fall each year as debt is repaid. <b>Interest coverage</b> (EBITDA ÷ interest) should rise — above ~2× is healthier.</p>'+
-  '<h3>Sensible starting assumptions if you’re unsure</h3><p>Exit multiple = entry multiple (don’t assume you’ll sell for more). Term loan 4–6× EBITDA. Mandatory amortization ~1%/yr. Cash sweep 50–75%. Tax rate ~25%. Hold drivers flat at the base year unless you have a reason to change them. Then stress-test with the sensitivity table.</p>'+
+  '<h3>Sensible starting assumptions if you’re unsure</h3><p>Exit multiple <i>(the EBITDA multiple you assume a future buyer pays when you sell)</i> = entry multiple <i>(the multiple you pay to buy in)</i> — don’t assume you’ll sell for more. Term loan <i>(the main acquisition debt)</i> 4–6× EBITDA. Mandatory amortization <i>(principal you’re required to repay each year)</i> ~1%/yr. Cash sweep <i>(share of leftover cash flow used to pre-pay debt early)</i> 50–75%. Tax rate ~25%. Hold the drivers <i>(your year-by-year growth and margin assumptions)</i> flat at the base year unless you have a reason to change them. Then stress-test with the sensitivity table <i>(the grid that re-runs returns at different entry and exit multiples)</i>.</p>'+
   '<h3>Setting the years &amp; entering multi-year data</h3><p>In the <b>Target financials</b> section set the <b>base year</b> (your latest actual year) and the <b>final projection year</b> — the forecast runs from one to the other, so you can model any horizon from 1 to 15 years. The input columns and every output table resize automatically. For the projected years, open <b>Multi-year forecast</b> and choose a method: <b>“% growth &amp; margins”</b> lets you type a growth rate and margin for each year, while <b>“Enter $ figures”</b> lets you paste each year’s revenue, COGS, SG&amp;A, depreciation and CapEx in dollars — useful when a CIM already gives you a full projection. Extra historical years beyond the base year aren’t needed; an LBO projects forward from the most recent actuals.</p>'+
   '<p class="note-bar">This tool implements standard LBO mechanics, including the cash-flow sweep and the circular interest calculation.</p>';
 }
@@ -801,17 +811,29 @@ function sendChat(preset){
 }
 /* ---- AI mode (optional, via your hosted proxy) ---- */
 function proxyUrl(){try{return (localStorage.getItem('lbo_proxy_url')||AI_PROXY_URL||'').trim();}catch(e){return AI_PROXY_URL;}}
+function showProxyRow(show){
+  const r=document.getElementById('proxyRow'); if(!r)return;
+  r.style.display=show?'flex':'none';
+  if(show){const i=document.getElementById('proxyInput'); i.value=proxyUrl(); i.focus();}
+}
 function setProxy(){
-  const cur=proxyUrl();
-  const v=prompt('Paste your Cloudflare Worker URL to enable AI mode (leave blank to clear):',cur);
-  if(v===null)return;
-  try{ if(v.trim())localStorage.setItem('lbo_proxy_url',v.trim()); else localStorage.removeItem('lbo_proxy_url'); }catch(e){}
-  updateAIStatus();
+  const r=document.getElementById('proxyRow');
+  showProxyRow(r.style.display==='none');
+}
+function saveProxy(){
+  const v=document.getElementById('proxyInput').value.trim();
+  try{ if(v)localStorage.setItem('lbo_proxy_url',v); else localStorage.removeItem('lbo_proxy_url'); }catch(e){}
+  showProxyRow(false);
+  if(v){
+    const cb=document.getElementById('aiToggle'); cb.checked=true; AI_ON=true;
+    updateAIStatus();
+    addMsg('bot','Proxy saved and AI mode is on. Ask me anything about this deal — e.g. "is this leverage aggressive?"');
+  } else { AI_ON=false; const cb=document.getElementById('aiToggle'); if(cb)cb.checked=false; updateAIStatus(); }
 }
 function toggleAI(){
   const cb=document.getElementById('aiToggle');
   AI_ON=cb.checked;
-  if(AI_ON && !proxyUrl()){ AI_ON=false; cb.checked=false; addMsg('bot','To use AI mode, set your proxy URL first — click the gear icon and paste your Cloudflare Worker URL.'); setProxy(); if(proxyUrl()){AI_ON=true;cb.checked=true;} }
+  if(AI_ON && !proxyUrl()){ AI_ON=false; cb.checked=false; addMsg('bot','First set your proxy URL: paste your Cloudflare Worker URL in the box below and click Save.'); showProxyRow(true); }
   updateAIStatus();
 }
 function updateAIStatus(){
