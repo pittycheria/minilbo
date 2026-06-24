@@ -93,11 +93,14 @@
 
 <div class="wrap">
   <div class="toolbar">
-    <button class="primary" onclick="loadExample()">Load example deal</button>
-    <button onclick="exportJSON()">Export assumptions (.json)</button>
-    <button onclick="document.getElementById('imp').click()">Import assumptions</button>
+    <button class="primary" onclick="loadExample()" title="Reset every field to the built-in sample deal.">Load example deal</button>
+    <button onclick="exportJSON()" title="Save all your current inputs to a .json file on your computer, so you can reload this exact deal later or send it to someone.">Export assumptions (.json)</button>
+    <button onclick="document.getElementById('imp').click()" title="Load a previously exported .json file to instantly refill every field with that saved deal.">Import assumptions</button>
     <input id="imp" type="file" accept="application/json" style="display:none" onchange="importJSON(event)">
-    <button onclick="window.print()">Print / Save as PDF</button>
+    <button onclick="window.print()" title="Open your browser's print dialog — choose 'Save as PDF' to keep a snapshot.">Print / Save as PDF</button>
+  </div>
+  <div class="legend" style="margin:-4px 0 14px">
+    <b>Tip — saving &amp; sharing a deal:</b> this tool doesn’t remember your numbers after you close the tab. Click <b>Export assumptions</b> to save your current inputs as a small <code>.json</code> file (one per deal or scenario). Later, click <b>Import assumptions</b> and pick that file to reload everything exactly as it was — or email the file to a colleague so they see <i>your</i> numbers. The shared web link only opens a blank tool; the <code>.json</code> file is what carries a specific deal.
   </div>
 
   <div class="layout">
