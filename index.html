@@ -226,15 +226,6 @@ window.LBO_SMAP={"A1":8,"A2":8,"B2":2,"A3":8,"B3":1,"C3":4,"D3":4,"E3":4,"F3":4,
   </div>
   <div id="chatMsgs"></div>
   <div class="chat-suggest" id="chatSuggest"></div>
-  <div class="chat-mode">
-    <label class="aim"><input type="checkbox" id="aiToggle" checked onchange="toggleAI()"> AI mode</label>
-    <span id="aiStatus" class="ai-status">built-in explainer</span>
-    <button class="lnk" onclick="setProxy()" title="Set your AI proxy URL">&#9881;</button>
-  </div>
-  <div id="proxyRow" class="proxy-row" style="display:none">
-    <input id="proxyInput" placeholder="https://...workers.dev" autocomplete="off" spellcheck="false">
-    <button onclick="saveProxy()">Save</button>
-  </div>
   <div class="chat-input">
     <input id="chatBox" placeholder="e.g. how is sponsor equity calculated?" onkeydown="if(event.key==='Enter'){sendChat();}">
     <button onclick="sendChat()">Send</button>
